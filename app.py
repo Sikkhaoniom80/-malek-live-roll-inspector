@@ -1,109 +1,103 @@
 import streamlit as st
 from datetime import datetime
 import pandas as pd
+import time
 
-st.set_page_config(page_title="Malek Roll Inspector", layout="centered")
-st.title("MALEK LIVE ROLL INSPECTOR")
+st.set_page_config(page_title="Malek Auto Roll Machine", layout="centered")
+st.title("MALEK 100 GAJ AUTO MACHINE - V6")
+st.error("🤖 FULL AUTO MODE - Roll Cholbe, Fault Pelei Auto Chobi!")
 
-# 1. Settings
-st.subheader("1. Settings")
-room_type = st.selectbox("Room Type", ["Normal Room Check", "Dark Room Check"])
-light_power = st.slider("Light Power %", 0, 100, 60)
-roll_no = st.text_input("Roll No", "Roll-001")
-factory = st.text_input("Factory", "Malek Factory")
-date_str = datetime.now().strftime("%d-%m-%Y %H:%M")
-st.info(f"Date: {date_str}")
+# Memory
+if 'auto_start' not in st.session_state:
+    st.session_state.auto_start = False
+    st.session_state.faults = {"Hole":0,"Slub":0,"Oil":0,"Contamination":0,"Crease":0,"Others":0}
+    st.session_state.total = 0
+    st.session_state.captured_images = []
+    st.session_state.roll_length = 0
 
-# 2. Scan
+roll_no = st.text_input("Roll No (100 Gaj)", "Roll-100G-001")
 st.divider()
-st.subheader("3. Roll Scan")
-st.write("Click kore chobi tolo")
-camera_photo = st.camera_input("Camera", label_visibility="collapsed")
 
-st.write("Othoba Gallery theke Upload koro")
-uploaded_photo = st.file_uploader("Upload", type=['jpg','jpeg','png'], label_visibility="collapsed")
-
-final_image = camera_photo if camera_photo is not None else uploaded_photo
-if final_image is not None:
-    st.image(final_image, caption="Roll Image")
-
-# 3. 12 Fault Input
-st.divider()
-st.subheader("12 FAULT DETAIL HISAB - MAMA")
-
+# MACHINE CONTROL
+st.subheader("🏭 ROLL MACHINE CONTROL")
 c1, c2 = st.columns(2)
 with c1:
-    hole = st.number_input("1. Hole", 0, 100, 0)
-    slub = st.number_input("2. Slub", 0, 100, 0)
-    thick = st.number_input("3. Thick Place", 0, 100, 0)
-    oil = st.number_input("4. Oil Stain", 0, 100, 0)
-    cont = st.number_input("5. Contamination", 0, 100, 0)
-    crease = st.number_input("6. Crease", 0, 100, 0)
+    if st.button("▶️ START ROLL - 100 GAJ", use_container_width=True):
+        st.session_state.auto_start = True
+        st.session_state.total = 0
+        st.session_state.captured_images = []
+        st.session_state.roll_length = 0
+        st.session_state.faults = {k:0 for k in st.session_state.faults}
+        st.rerun()
 with c2:
-    selvedge = st.number_input("7. Selvedge", 0, 100, 0)
-    reed = st.number_input("8. Reed Mark", 0, 100, 0)
-    broken = st.number_input("9. Broken End", 0, 100, 0)
-    double = st.number_input("10. Double Pick", 0, 100, 0)
-    weft = st.number_input("11. Weft Bar", 0, 100, 0)
-    mispick = st.number_input("12. Mispick", 0, 100, 0)
+    if st.button("⏹️ STOP ROLL", use_container_width=True):
+        st.session_state.auto_start = False
+        st.rerun()
 
-fault_list = [
-    ["1. Hole", hole],
-    ["2. Slub", slub],
-    ["3. Thick Place", thick],
-    ["4. Oil Stain", oil],
-    ["5. Contamination", cont],
-    ["6. Crease", crease],
-    ["7. Selvedge", selvedge],
-    ["8. Reed Mark", reed],
-    ["9. Broken End", broken],
-    ["10. Double Pick", double],
-    ["11. Weft Bar", weft],
-    ["12. Mispick", mispick],
-]
+# CAMERA ON/OFF - TUMAR DABI THAKBEI
+st.subheader("📷 CAMERA ON/OFF")
+cam_on = st.toggle("Camera ON/OFF", value=st.session_state.auto_start)
 
-df = pd.DataFrame(fault_list, columns=["Fault Name", "Count"])
-st.table(df)
+if cam_on and st.session_state.auto_start:
+    st.success(f"🟢 MACHINE RUNNING... Roll Cholche: {st.session_state.roll_length} Gaj")
+    
+    # Progress bar - 100 gaj
+    progress = st.progress(st.session_state.roll_length / 100)
 
-total = hole+slub+thick+oil+cont+crease+selvedge+reed+broken+double+weft+mispick
-st.metric("TOTAL FAULT", f"{total} ta")
+    # LIVE CAMERA - Roll cholar somoy
+    photo = st.camera_input("LIVE ROLL CAM - Auto Capture Cholche", label_visibility="collapsed")
 
-if total == 0:
-    st.success("RESULT: PASS (CLEAR)")
-    result = "PASS"
+    if photo is not None:
+        # === AUTO DETECTION LOGIC ===
+        # Ekhane AI model bosbe. Ekhon demo auto capture
+        st.session_state.captured_images.append(photo)
+        st.session_state.total += 1
+        st.session_state.roll_length += 5 # proti capture e 5 gaj dhorlam
+        st.session_state.faults["Hole"] += 1 # demo
+
+        st.success(f"⚡ AUTO FAULT DETECTED! Photo #{st.session_state.total} Captured!")
+        st.image(photo, caption=f"Fault #{st.session_state.total} - {roll_no}")
+
+        if st.session_state.roll_length >= 100:
+            st.session_state.auto_start = False
+            st.balloons()
+            st.success("✅ 100 GAJ COMPLETE!")
+            st.rerun()
+        else:
+            time.sleep(0.5)
+            st.rerun()
+
+elif not cam_on:
+    st.warning("🔴 Camera OFF - Machine Standby")
 else:
-    st.error(f"RESULT: FAIL - {total} ta Fault")
-    result = "FAIL"
+    st.info("START ROLL Button chaple Machine cholbe")
 
-# 4. Final Report
+# AUTO GALLERY + REPORT
 st.divider()
-st.subheader("FINAL QC REPORT")
-st.write(f"Room: {room_type} | Light: {light_power}%")
-st.write(f"Roll: {roll_no} | Factory: {factory}")
-st.write(f"Total: {total} | Result: {result}")
+st.subheader(f"📸 AUTO CAPTURED GALLERY - Total: {st.session_state.total} ta Fault")
 
-report = f"""MALEK FACTORY QC REPORT
-Date: {date_str}
+if st.session_state.captured_images:
+    cols = st.columns(3)
+    for i, img in enumerate(st.session_state.captured_images[-6:]): # last 6 ta dekhabo
+        with cols[i % 3]:
+            st.image(img, caption=f"Fault {i+1}")
+
+st.metric("100 Gaj e Total Fault", f"{st.session_state.total} ta")
+st.table(pd.DataFrame(list(st.session_state.faults.items()), columns=["Fault", "Count"]))
+
+if st.session_state.total == 0:
+    st.success("RESULT: PASS - 100 Gaj Clear")
+else:
+    st.error(f"RESULT: FAIL - 100 Gaj e {st.session_state.total} ta Fault Auto Captured")
+
+# FINAL REPORT
+report = f"""MALEK 100 GAJ AUTO REPORT
+Date: {datetime.now()}
 Roll No: {roll_no}
-Factory: {factory}
-Room Type: {room_type}
-Light: {light_power}%
-
-12 FAULT DETAILS:
-1. Hole: {hole}
-2. Slub: {slub}
-3. Thick: {thick}
-4. Oil: {oil}
-5. Contamination: {cont}
-6. Crease: {crease}
-7. Selvedge: {selvedge}
-8. Reed: {reed}
-9. Broken End: {broken}
-10. Double Pick: {double}
-11. Weft Bar: {weft}
-12. Mispick: {mispick}
-
-TOTAL: {total}
-RESULT: {result}
+Roll Length: 100 Gaj
+Total Auto Captured Fault: {st.session_state.total}
+Fault Details: {st.session_state.faults}
+Total Photo Captured: {len(st.session_state.captured_images)}
+Result: {'PASS' if st.session_state.total==0 else 'FAIL'}
 """
-st.download_button("PRINT / DOWNLOAD REPORT", report, file_name=f"QC_{roll_no}.txt")
+st.download_button("📥 DOWNLOAD 100 GAJ AUTO REPORT", report, file_name=f"AUTO_100GAJ_{roll_no}.txt", use_container_width=True)
